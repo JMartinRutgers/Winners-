@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Stock Analysis Around Event</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        #flowDiagram {
+            width: 100%;
+            height: 500px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .node {
+            fill: lightcoral;
+            stroke: maroon;
+            stroke-width: 2px;
+        }
+        .link {
+            stroke: maroon;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+        .node text {
+            font-size: 12px;
+            font-family: Arial;
+        }
+    </style>
+</head>
+<body>
+    <h1>Amazon (AMZN) Stock Analysis Around Event</h1>
+    
+    <div class="chart-container">
+        <h2>Price Action Around Event Date</h2>
+        <canvas id="priceChart"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <h2>Trading Volume</h2>
+        <canvas id="volumeChart"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <h2>Hypothetical Fund Flow in Amazon (AMZN)</h2>
+        <div id="flowDiagram"></div>
+    </div>
+
+    <script>
+        // Sample data - in a real app you would fetch this from an API
+        const eventDate = '2025-01-30';
+        const amznData = {
+            dates: ['2025-01-20', '2025-01-21', '2025-01-22', '2025-01-23', '2025-01-24', 
+                   '2025-01-27', '2025-01-28', '2025-01-29', eventDate, '2025-01-31',
+                   '2025-02-03', '2025-02-04', '2025-02-05', '2025-02-06', '2025-02-07'],
+            prices: [155.20, 156.75, 158.30, 157.85, 159.40, 
+                    160.25, 161.50, 162.75, 159.20, 158.50,
+                    157.80, 159.10, 160.40, 161.20, 162.50],
+            volumes: [45.2, 43.7, 42.1, 47.5, 46.8,
+                     52.3, 48.6, 55.1, 78.4, 65.2,
+                     58.7, 53.4, 49.8, 47.2, 45.6] // in millions
+        };
+
+        // Find index of event date
+        const eventIndex = amznData.dates.indexOf(eventDate);
+
+        // Price Chart
+        const priceCtx = document.getElementById('priceChart').getContext('2d');
+        const priceChart = new Chart(priceCtx, {
+            type: 'line',
+            data: {
+                labels: amznData.dates,
+                datasets: [{
+                    label: 'AMZN Closing Price',
+                    data: amznData.prices,
+                    borderColor: 'darkblue',
+                    backgroundColor: 'rgba(0, 0, 139, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                xMin: eventIndex,
+                                xMax: eventIndex,
+                                borderColor: 'crimson',
+                                borderWidth: 2,
+                                borderDash: [6, 6],
+                                label: {
+                                    content: 'Event Date',
+                                    enabled: true,
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `$${context.parsed.y.toFixed(2)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Price ($)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Volume Chart
+        const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+        const volumeChart = new Chart(volumeCtx, {
+            type: 'bar',
+            data: {
+                labels: amznData.dates,
+                datasets: [{
+                    label: 'Volume (Millions)',
+                    data: amznData.volumes,
+                    backgroundColor: 'skyblue',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                xMin: eventIndex,
+                                xMax: eventIndex,
+                                borderColor: 'crimson',
+                                borderWidth: 2,
+                                borderDash: [6, 6]
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Volume (Millions)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Flow Diagram using SVG
+        const flowDiagram = document.getElementById('flowDiagram');
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
+        flowDiagram.appendChild(svg);
+
+        // Define arrow marker
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+        marker.setAttribute("id", "arrowhead");
+        marker.setAttribute("markerWidth", "10");
+        marker.setAttribute("markerHeight", "7");
+        marker.setAttribute("refX", "9");
+        marker.setAttribute("refY", "3.5");
+        marker.setAttribute("orient", "auto");
+        const arrow = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        arrow.setAttribute("points", "0 0, 10 3.5, 0 7");
+        arrow.setAttribute("fill", "maroon");
+        marker.appendChild(arrow);
+        defs.appendChild(marker);
+        svg.appendChild(defs);
+
+        // Nodes data
+        const nodes = [
+            { id: "Retail AMZN Investors", x: 150, y: 100 },
+            { id: "Institutional AMZN Investors", x: 150, y: 200 },
+            { id: "Market Makers", x: 300, y: 300 },
+            { id: "Cloud Computing Sector Funds", x: 450, y: 200 },
+            { id: "AMZN Underlying Stock", x: 450, y: 100 }
+        ];
+
+        // Links data
+        const links = [
+            { source: "Retail AMZN Investors", target: "Institutional AMZN Investors", width: 7 },
+            { source: "Institutional AMZN Investors", target: "Market Makers", width: 8 },
+            { source: "Market Makers", target: "Cloud Computing Sector Funds", width: 4 },
+            { source: "Cloud Computing Sector Funds", target: "AMZN Underlying Stock", width: 6 }
+        ];
+
+        // Draw links
+        links.forEach(link => {
+            const sourceNode = nodes.find(n => n.id === link.source);
+            const targetNode = nodes.find(n => n.id === link.target);
+            
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const curveIntensity = link.source.startsWith("Retail") ? 50 : -50;
+            
+            // Create curved path
+            const d = `M${sourceNode.x},${sourceNode.y} 
+                       C${sourceNode.x + 100},${sourceNode.y + curveIntensity} 
+                        ${targetNode.x - 100},${targetNode.y - curveIntensity} 
+                        ${targetNode.x},${targetNode.y}`;
+            
+            path.setAttribute("d", d);
+            path.setAttribute("class", "link");
+            path.setAttribute("stroke-width", link.width);
+            svg.appendChild(path);
+        });
+
+        // Draw nodes
+        nodes.forEach(node => {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", node.x);
+            circle.setAttribute("cy", node.y);
+            circle.setAttribute("r", 40);
+            circle.setAttribute("class", "node");
+            svg.appendChild(circle);
+            
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", node.x);
+            text.setAttribute("y", node.y);
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("dy", ".3em");
+            text.setAttribute("fill", "black");
+            text.textContent = node.id;
+            svg.appendChild(text);
+        });
+    </script>
+</body>
+</html>
